@@ -15,10 +15,12 @@ If you happen to end up here, good luck if you decide to use this as-is software
 To start monitoring a channel and record it when it shows up, run the `record_stream.py` script as follows:
 
 ```
-python3 record_stream.py --channel <twitch_channel_name> --path <recording_dest_path>
+python3 record_stream.py --channel <twitch_channel_name> --path <recording_dest_path> --quality <quality>
 ```
 
 Where `<twitch_channel_name>` comes from `twitch.tv/<twitch_channel_name>` for the broadcaster and `<recording_dest_path>` is the path where you'd like the software to create folders and stream files.
+
+Finally, `<quality>` can be `best`, `high`, `medium`, `low`, and `audio`.
 
 ## Running the Transcoder
 
