@@ -1,0 +1,4 @@
+ffmpeg_python==0.2.0
+streamlink==2.1.1
+Click==7.0
+ffmpeg==1.4
