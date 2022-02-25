@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from pathlib import Path
@@ -40,19 +41,21 @@ def transcode(candidate: str):
     transcoded_path = (
         f"{transcoded_dir}/{candidate_path.name.replace('.mp4', '_x265.mp4')}"
     )
-    print(
+    logging.info(
         f"Transcoding from source: {candidate_path} to destination: {transcoded_path}"
     )
+    mixed_in = ffmpeg.input(candidate_path)
+    video = mixed_in.video.filter("fps", fps=30)
+    audio = mixed_in.audio
     try:
         (
-            ffmpeg.input(candidate_path)
-            .filter("fps", fps=30)
-            .output(transcoded_path, vcodec="libx265", crf="28", preset="fast")
-            .run()
+            ffmpeg.output(
+                video, audio, transcoded_path, vcodec="libx265", crf="28", preset="fast"
+            ).run()
         )
     except Exception as e:
-        print("Encountered an exception while transcoding:")
-        print(e)
+        logging.error("Encountered an exception while transcoding:")
+        logging.exception(e)
     os.remove(candidate_path)
 
 
@@ -62,19 +65,25 @@ def transcode(candidate: str):
 )
 def run(path: str):
     while True:
-        print(f"Looking for transcoding candidates...")
+        logging.info(f"Looking for transcoding candidates...")
         find_transcoding_candidates(path)
         if len(candidates) > 0:
-            print(f"Found {len(candidates)} candidates for transcoding.")
+            num_candidates = len(candidates)
+            logging.info(f"Found {num_candidates} candidates for transcoding.")
             for candidate in candidates:
-                print(f"Starting transcoding of candidate: {candidate}.")
+                logging.info(f"Starting transcoding of candidate: {candidate}.")
                 candidates.remove(candidate)
                 transcode(candidate)
-            print(f"Finished transcoding {len(candidates)} candidates.")
+            logging.info(f"Finished transcoding {num_candidates} candidates.")
         else:
-            print(f"Didn't find any transcoding candidates...")
+            logging.info(f"Didn't find any transcoding candidates...")
         time.sleep(30)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     run()

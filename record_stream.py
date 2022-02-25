@@ -1,10 +1,13 @@
+import logging
 import os
-import click
 import time
-from streamlink import Streamlink, NoPluginError, PluginError, StreamError
 from datetime import datetime
 
+import click
+from streamlink import NoPluginError, PluginError, StreamError, Streamlink
+
 streamlink = Streamlink()
+
 
 @click.command()
 @click.option("--channel", default="roshtein", help="Twitch channel to capture from.")
@@ -13,6 +16,7 @@ streamlink = Streamlink()
 )
 @click.option("--quality", default="best", help="Twitch stream quality")
 def start_capturing(channel: str, path: str, quality: str):
+    capturing = False
     while True:
         try:
             # Set up parameters
@@ -25,7 +29,7 @@ def start_capturing(channel: str, path: str, quality: str):
                 os.makedirs(out_dir)
             if not os.path.exists(completed_dir):
                 os.makedirs(completed_dir)
-            
+
             out_path = f"{out_dir}/{filename}"
             completed_path = f"{completed_dir}/{filename}"
 
@@ -35,37 +39,48 @@ def start_capturing(channel: str, path: str, quality: str):
             fd = best_stream.open()
             out = open(out_path, "ab")
 
-            print(f"Recording from {stream_url} at {quality} quality to {out_path}")
+            logging.info(
+                f"Recording from {stream_url} at {quality} quality to {out_path}"
+            )
 
             # Read from stream buffer and write to file
             while True:
+                if not capturing:
+                    capturing = True
                 data = fd.read(1024)
                 if data is None or data == -1 or data == 0:
                     break
                 else:
                     out.write(data)
+
+        except NoPluginError as e:
+            logging.error("Failed to find plugin: ")
+            logging.exception(e)
+        except PluginError as e:
+            logging.error("Got a plugin error:")
+            logging.exception(e)
+        except StreamError as e:
+            logging.error("Got a stream error:")
+            logging.exception(e)
+        except Exception as e:
+            logging.info("Got some other exception (likely streamer is offline):")
+            logging.exception(e)
+        if capturing:
             fd.flush()
             fd.close()
             out.flush()
             out.close()
-            print("Stream ended, cleaning up...")
+            logging.info("Stream ended, cleaning up...")
             os.rename(out_path, completed_path)
-            print(f"Moved finished stream file to {completed_path}")
-
-        except NoPluginError as e:
-            print("Failed to find plugin: ")
-            print(e)
-        except PluginError as e:
-            print("Got a plugin error:")
-            print(e)
-        except StreamError as e:
-            print("Got a stream error:")
-            print(e)
-        except Exception as e:
-            print("Got some other exception (likely streamer is offline):")
-            print(e)
+            logging.info(f"Moved finished stream file to {completed_path}")
+            capturing = False
         time.sleep(60)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     start_capturing()
